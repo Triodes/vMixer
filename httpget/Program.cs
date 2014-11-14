@@ -256,7 +256,7 @@ namespace httpget
             // standard system icon for simplicity, but you
             // can of course use your own custom icon too.
             trayIcon = new NotifyIcon();
-            trayIcon.Text = "MyTrayApp";
+            trayIcon.Text = "vMixer";
             trayIcon.Icon = new Icon("error.ico");
 
             // Add menu to tray icon and show it.
