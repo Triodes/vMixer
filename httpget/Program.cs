@@ -95,7 +95,6 @@ namespace httpget
             {
                 type = p.ReadByte();
             }
-            //Console.WriteLine(i);
             if (type == 0)
             {
                 int fadeLevel;
@@ -103,7 +102,6 @@ namespace httpget
                 {
                     fadeLevel = p.ReadByte();
                 }
-                Console.WriteLine(fadeLevel);
                 Stream st = Query("?Function=SetFader&Value=" + (flip ? 255 - fadeLevel : fadeLevel));
                 st.Close();
                 if (fadeLevel == 255)
@@ -139,7 +137,6 @@ namespace httpget
         object locker = new object();
         void getInfo(object sender, EventArgs e)
         {
-            //Console.WriteLine(isAlive.Enabled);
             Stream response = Query();
             XmlReader r = XmlReader.Create(response);
             while (r.Read())
@@ -216,7 +213,6 @@ namespace httpget
         public Stream Query(string urlEnd = "")
         {
             string s = "http://127.0.0.1:8088/api/"+urlEnd;
-            //Console.WriteLine(s);
             Stream str = null;
             lock (c)
             {
@@ -233,6 +229,8 @@ namespace httpget
         }
 
         #endregion
+
+
 
         private NotifyIcon trayIcon;
         private ContextMenu trayMenu;
