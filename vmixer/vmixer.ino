@@ -1,7 +1,7 @@
 const int potPin = A0;
 const byte buttonPins[5] = {A1,A2,A3,A4,A5};
 boolean Connected = false;
-int isAlive;
+int isAlive = 0;
 
 void setup()
 {
@@ -32,7 +32,7 @@ void loop()
     delay(5);
     processPot();
     delay(5);
-    Liveness(current-previous);
+    Liveness(current - previous);
   }
   else
   {
@@ -88,11 +88,24 @@ void serialEvent() //Handle incoming messages
    if (type == 0) //update given LED
    {
      delay(10);
-     byte pin = Serial.read();
+     byte state = Serial.read();
+     byte mask = B10000000;
+     for (int i = 2; i < 10; i++)
+     {
+        if ((state & mask) > 0)
+          digitalWrite(i, HIGH);
+        else
+          digitalWrite(i,LOW);
+        mask = mask >> 1;
+     }
+   }
+   else if (type == 1)
+   {
      delay(10);
-     byte val = Serial.read();
-     digitalWrite(pin,val);
-   } //Connect
+     int state = Serial.read();
+     digitalWrite(10,state);
+   } 
+   //Connect
    else if (type == 125)
    {
      isAlive = 0;
@@ -128,7 +141,7 @@ void serialEvent() //Handle incoming messages
 void Liveness(int elapsed)
 {
   isAlive += elapsed;
-  if (isAlive > 2000)
+  if (isAlive > 3000)
   {
     Connected = false;
     isAlive = 0;
