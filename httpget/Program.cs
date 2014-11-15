@@ -64,6 +64,7 @@ namespace httpget
                     if (temp == t)
                     {
                         p.Write(new byte[1] { 1 }, 0, 1);
+                        Thread.Sleep(1500);
                         Start();
                         return;
                     }
@@ -128,9 +129,8 @@ namespace httpget
 
         byte preview = 0, oldPreview = 0, active = 0, oldActive = 0;
         bool ftb = false, ftbOld = false;
-        byte[] previewLeds = new byte[4] { 2, 3, 4, 5 };
-        byte[] activeLeds = new byte[4] { 6, 7, 8, 9 };
-        const byte ftbLed = 10;
+        int previewLeds = 0, activeLeds = 0;
+        object locker = new object();
         void getInfo(object sender, EventArgs e)
         {
             //Console.WriteLine(isAlive.Enabled);
@@ -148,12 +148,8 @@ namespace httpget
 
                         if (oldPreview != preview)
                         {
-                            lock (p)
-                            {
-                                WriteLed(previewLeds[preview-1], 1);
-                                if (oldPreview != 0)
-                                    WriteLed(previewLeds[oldPreview-1], 0);
-                            }
+                            previewLeds = 1 << (8 - preview);
+                            WriteLedState();
                         }
                     }
                     else if (r.Name == "active")
@@ -164,12 +160,8 @@ namespace httpget
 
                         if (oldActive != active)
                         {
-                            lock (p)
-                            {
-                                WriteLed(activeLeds[active-1], 1);
-                                if (oldActive != 0)
-                                    WriteLed(activeLeds[oldActive - 1], 0);
-                            }
+                            activeLeds = 1 << (4 - active);
+                            WriteLedState();
                         }
                     }
                     else if (r.Name == "fadeToBlack")
@@ -182,7 +174,7 @@ namespace httpget
                         {
                             lock (p)
                             {
-                                WriteLed(ftbLed, Convert.ToByte(ftb));
+                                p.Write(new byte[2] {1, Convert.ToByte(ftb)} , 0, 2);
                             }
                         }
                     }
@@ -192,6 +184,14 @@ namespace httpget
             response.Close();
         }
 
+        void WriteLedState()
+        {
+            lock (p)
+            {
+                p.Write(new byte[2] { 0, (byte)(previewLeds | activeLeds) }, 0, 2);
+            }
+        }
+
         void KeepAlive(object sender, EventArgs e)
         {
             lock (p)
@@ -199,22 +199,6 @@ namespace httpget
                 try
                 {
                     p.Write(new byte[1] { 125 }, 0, 1);
-                }
-                catch
-                {
-                    Exit();
-                }
-            }
-        }
-
-
-        void WriteLed(byte led, byte val)
-        {
-            lock (p)
-            {
-                try
-                {
-                    p.Write(new byte[3] { 0, led, val }, 0, 3);
                 }
                 catch
                 {
