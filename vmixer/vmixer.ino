@@ -116,7 +116,7 @@ void serialEvent() //Handle incoming messages
      int randomVal = Serial.read();
      Serial.write(randomVal);
      int i = 0;
-     while (!Serial.available() || i < 50)
+     while (Serial.available() <= 0 || i < 50)
      {
        delay(10);
        i++;
