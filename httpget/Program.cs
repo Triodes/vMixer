@@ -13,6 +13,8 @@ namespace httpget
 {
     class Program : ApplicationContext
     {
+        #region Scanning and startup
+
         SerialPort p;
         WebClient c = new WebClient();
         private System.Timers.Timer timer, keepAlive;
@@ -79,6 +81,10 @@ namespace httpget
         {
             Environment.Exit(0);
         }
+
+        #endregion
+
+        #region data handling
 
         bool flip = false;
         void p_DataReceived(object sender, SerialDataReceivedEventArgs e)
@@ -241,6 +247,8 @@ namespace httpget
             }
             return str;
         }
+
+        #endregion
 
         private NotifyIcon trayIcon;
         private ContextMenu trayMenu;
