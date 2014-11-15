@@ -22,23 +22,32 @@ void setup()
 }
 
 unsigned long previous = 0, current = 0;
+int elapsed1 = 0, elapsed2 = 0;
 void loop()
 {
   previous = current;
   current = millis();
   if (Connected)
   {
-    processButtons();
-    delay(5);
-    processPot();
-    delay(5);
+    elapsed1 += (current - previous);
+    if (elapsed1 > 10)
+    {
+      elapsed1 = 0;
+      processButtons();
+      processPot();
+    }
     Liveness(current - previous);
   }
   else
   {
-     IndicateScan();
-     delay(100);
+    elapsed2 += (current - previous);
+    if (elapsed2 > 100)
+    {
+      elapsed2 = 0;
+      IndicateScan();
+    }
   }
+  Poll();
 }
 
 
@@ -82,60 +91,62 @@ void processPot() //read the pot value and report changes (if any)
   } 
 }
 
-void serialEvent() //Handle incoming messages
+void Poll() //Handle incoming messages
 {
-   byte type = Serial.read();
-   if (type == 0) //update given LED
-   {
-     delay(10);
-     byte state = Serial.read();
-     byte mask = B10000000;
-     for (int i = 2; i < 10; i++)
-     {
-        if ((state & mask) > 0)
+  if (Serial.available() > 0)
+  {
+    byte type = Serial.read();
+    if (type == 0) //update given LED
+    {
+      delay(10);
+      byte state = Serial.read();
+      byte mask = B10000000;
+      for (int i = 2; i < 10; i++)
+      {
+         if ((state & mask) > 0)
+           digitalWrite(i, HIGH);
+         else
+           digitalWrite(i,LOW);
+         mask = mask >> 1;
+      }
+    }
+    else if (type == 1)
+    {
+      delay(10);
+      int state = Serial.read();
+      digitalWrite(10,state);
+    } 
+    else if (type == 125)
+    {
+      isAlive = 0;
+    }
+    else if (type == 255)
+    {
+      delay(10);
+      int randomVal = Serial.read();
+      Serial.write(randomVal);
+      int i = 0;
+      while (Serial.available() <= 0 || i < 50)
+      {
+        delay(10);
+        i++;
+      }
+      int m = Serial.read();
+      if (m == 1)
+      {
+        for (int i = 2; i <= 10; i++)
+        {
           digitalWrite(i, HIGH);
-        else
-          digitalWrite(i,LOW);
-        mask = mask >> 1;
-     }
-   }
-   else if (type == 1)
-   {
-     delay(10);
-     int state = Serial.read();
-     digitalWrite(10,state);
-   } 
-   //Connect
-   else if (type == 125)
-   {
-     isAlive = 0;
-   }
-   else if (type == 255)
-   {
-     delay(10);
-     int randomVal = Serial.read();
-     Serial.write(randomVal);
-     int i = 0;
-     while (Serial.available() <= 0 || i < 50)
-     {
-       delay(10);
-       i++;
-     }
-     int m = Serial.read();
-     if (m == 1)
-     {
-       for (int i = 2; i <= 10; i++)
-       {
-         digitalWrite(i, HIGH);
-       }
-       delay(1000);
-       for (int i = 2; i <= 10; i++)
-       {
-         digitalWrite(i, LOW);
-       }
-       Connected = true;
-     }
-   }  
+        }
+        delay(1000);
+        for (int i = 2; i <= 10; i++)
+        {
+          digitalWrite(i, LOW);
+        }
+        Connected = true;
+      }
+    }
+  }
 }
 
 void Liveness(int elapsed)
@@ -145,6 +156,8 @@ void Liveness(int elapsed)
   {
     Connected = false;
     isAlive = 0;
+    elapsed1 = 0;
+    elapsed2 = 0;
     for (int i = 2; i <= 10; i++)
     {
       digitalWrite(i, LOW);
