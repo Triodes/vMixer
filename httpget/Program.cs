@@ -18,7 +18,7 @@ namespace httpget
         SerialPort p;
         WebClient c = new WebClient();
         private System.Timers.Timer timer, keepAlive;
-        bool connected = false;
+        bool connected = false, vmixOn = true;
         
         static void Main(string[] args)
         {
@@ -53,11 +53,12 @@ namespace httpget
         {
             connected = true;
             Random r = new Random();
-            for (int i = 1; i < 256; i++)
+            string[] ports = SerialPort.GetPortNames();
+            for (int i = 0; i < ports.Length; i++)
             {
                 try
                 {
-                    p = new SerialPort("COM" + i, 9600);
+                    p = new SerialPort(ports[i], 9600);
                     p.ReadTimeout = 1000;
                     byte t = (byte)r.Next(255);
                     p.Open();
@@ -102,13 +103,15 @@ namespace httpget
                 {
                     fadeLevel = ReadByte();
                 }
-                Stream st = Query("?Function=SetFader&Value=" + (flip ? 255 - fadeLevel : fadeLevel));
-                st.Close();
-                if (fadeLevel == 255)
-                    flip = true;
-                else if (fadeLevel == 0)
-                    flip = false;
-
+                if (fadeLevel != -1)
+                {
+                    Stream st = Query("?Function=SetFader&Value=" + (flip ? 255 - fadeLevel : fadeLevel));
+                    st.Close();
+                    if (fadeLevel == 255)
+                        flip = true;
+                    else if (fadeLevel == 0)
+                        flip = false;
+                }
             }
             else if (type == 1)
             {
@@ -120,12 +123,12 @@ namespace httpget
                 if (buttonNr < 5)
                 {
                     Stream st = Query("?Function=PreviewInput&Input=" + buttonNr);
-                    st.Close();
+                    if (st != null) st.Close();
                 }
                 else
                 {
                     Stream st = Query("?Function=FadeToBlack");
-                    st.Close();
+                    if (st != null) st.Close();
                 }
             }
         }
@@ -147,67 +150,62 @@ namespace httpget
         }
 
 
-        byte preview = 0, oldPreview = 0, active = 0, oldActive = 0;
+        int preview = 0, oldPreview = 0, active = 0, oldActive = 0;
         bool ftb = false, ftbOld = false;
-        int previewLeds = 0, activeLeds = 0;
-        object locker = new object();
         void getInfo(object sender, EventArgs e)
         {
             Stream response = Query();
-            XmlReader r = XmlReader.Create(response);
-            while (r.Read())
+            if (response != null)
             {
-                if (r.NodeType == XmlNodeType.Element)
+                XmlReader r = XmlReader.Create(response);
+                while (r.Read())
                 {
-                    if (r.Name == "preview")
+                    if (r.NodeType == XmlNodeType.Element)
                     {
-                        r.Read();
-                        oldPreview = preview;
-                        preview = byte.Parse(r.Value);
-
-                        if (oldPreview != preview)
+                        if (r.Name == "preview")
                         {
-                            previewLeds = 1 << (8 - preview);
-                            WriteLedState();
+                            r.Read();
+                            oldPreview = preview;
+                            preview = 1 << (8 - int.Parse(r.Value));
+
+                            if (oldPreview != preview)
+                                WriteLedState();
                         }
-                    }
-                    else if (r.Name == "active")
-                    {
-                        r.Read();
-                        oldActive = active;
-                        active = byte.Parse(r.Value);
-
-                        if (oldActive != active)
+                        else if (r.Name == "active")
                         {
-                            activeLeds = 1 << (4 - active);
-                            WriteLedState();
+                            r.Read();
+                            oldActive = active;
+                            active = 1 << (4 - int.Parse(r.Value));
+
+                            if (oldActive != active)
+                                WriteLedState();
                         }
-                    }
-                    else if (r.Name == "fadeToBlack")
-                    {
-                        r.Read();
-                        ftbOld = ftb;
-                        ftb = bool.Parse(r.Value);
-
-                        if (ftb != ftbOld)
+                        else if (r.Name == "fadeToBlack")
                         {
-                            lock (p)
+                            r.Read();
+                            ftbOld = ftb;
+                            ftb = bool.Parse(r.Value);
+
+                            if (ftb != ftbOld)
                             {
-                                try
+                                lock (p)
                                 {
-                                    p.Write(new byte[2] { 1, Convert.ToByte(ftb) }, 0, 2);
-                                }
-                                catch 
-                                {
-                                    HandleDisconnectArduino();
+                                    try
+                                    {
+                                        p.Write(new byte[2] { 1, Convert.ToByte(ftb) }, 0, 2);
+                                    }
+                                    catch
+                                    {
+                                        HandleDisconnectArduino();
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                r.Close();
+                response.Close(); 
             }
-            r.Close();
-            response.Close();
         }
 
         void WriteLedState()
@@ -216,7 +214,7 @@ namespace httpget
             {
                 try
                 {
-                    p.Write(new byte[2] { 0, (byte)(previewLeds | activeLeds) }, 0, 2);
+                    p.Write(new byte[2] { 0, (byte)(preview | active) }, 0, 2);
                 }
                 catch
                 {
@@ -252,9 +250,11 @@ namespace httpget
                 }
                 catch
                 {
-                    Exit();
+                    HandleDisconnectVmix();
                 }
             }
+            if (str != null)
+                vmixOn = true;
             return str;
         }
 
@@ -262,17 +262,31 @@ namespace httpget
 
         #region Connection error handling
 
+
+        object locker = new object();
         void HandleDisconnectArduino()
         {
-            timer.Stop();
-            keepAlive.Stop();
-            p.DataReceived -= p_DataReceived;
-            Scan();
+            lock (locker)
+            {
+                if (connected)
+                {
+                    connected = false;
+                    timer.Stop();
+                    keepAlive.Stop();
+                    p.DataReceived -= p_DataReceived;
+                    trayIcon.ShowBalloonTip(2000, "Kan niet verbinden!", "Er kan geen verbinding worden gemaakt met de mixer! Check de kabels en klik op 'rescan'.", ToolTipIcon.Error);
+                    trayIcon.Icon = new Icon("error.ico");
+                }
+            }
         }
 
         void HandleDisconnectVmix()
         {
-
+            if (vmixOn)
+            {
+                vmixOn = false;
+                trayIcon.ShowBalloonTip(2000, "vMix niet gevonden!", "Het programma kan vMix niet vinden! Controleer of vMix draait.", ToolTipIcon.Error);
+            }
         }
 
         #endregion
