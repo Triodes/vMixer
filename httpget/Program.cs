@@ -36,8 +36,8 @@ namespace httpget
         {
             trayIcon.Icon = new Icon("succes.ico");
 
-            p.DataReceived += p_DataReceived;
             p.ReceivedBytesThreshold = 2;
+            p.DataReceived += p_DataReceived;
 
             timer = new System.Timers.Timer();
             timer.Interval = 20;
@@ -69,15 +69,14 @@ namespace httpget
                     if (temp == t)
                     {
                         p.Write(new byte[1] { 1 }, 0, 1);
-                        Thread.Sleep(1500);
+                        //Thread.Sleep(1500);
                         Start();
                         return;
                     }
                 }
                 catch { p = null; }
             }
-            trayIcon.ShowBalloonTip(3000, "Kan niet verbinden!", "Er kan geen verbinding worden gemaakt met de mixer! Check de kabels en klik op 'rescan'. Als het probleem blijft bestaan: Stop het programma, maak de USB-kabel los en weer vast, start het programma opnieuw.", ToolTipIcon.Error);
-            trayIcon.Icon = new Icon("error.ico");
+            HandleDisconnectArduino(false);
             connected = false;
         }
 
@@ -266,17 +265,20 @@ namespace httpget
 
 
         object locker = new object();
-        void HandleDisconnectArduino()
+        void HandleDisconnectArduino(bool running = true)
         {
             lock (locker)
-            {                
+            {
+                if (running)
+                {
                     timer.Stop();
                     keepAlive.Stop();
                     p.DataReceived -= p_DataReceived;
                     p = null;
-                    trayIcon.ShowBalloonTip(3000, "Verbinding verbroken!", "De verbinding met de mixer is verbroken. Het programma sluit nu af. Controleer de kabels en herstart het programma.", ToolTipIcon.Error);
-                    trayIcon.Icon = new Icon("error.ico");
-                    Exit();                
+                }
+                trayIcon.ShowBalloonTip(3000, (running ? "Verbinding verbroken!" : "Kan niet verbinden!"), (running ? "De verbinding met de mixer is verbroken. " : "Kan geen verbinding maken met de mixer. ") + "Het programma sluit nu af. Controleer de kabels en herstart het programma.", ToolTipIcon.Error);
+                trayIcon.Icon = new Icon("error.ico");
+                Exit();
             }
         }
 
