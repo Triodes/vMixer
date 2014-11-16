@@ -18,7 +18,7 @@ namespace httpget
         SerialPort p;
         WebClient c = new WebClient();
         private System.Timers.Timer timer, keepAlive;
-        bool connected = false, vmixOn = true;
+        bool vmixOn = true;
         
         static void Main(string[] args)
         {
@@ -52,7 +52,6 @@ namespace httpget
 
         void Scan()
         {
-            connected = true;
             Random r = new Random();
             string[] ports = SerialPort.GetPortNames();
             for (int i = 0; i < ports.Length; i++)
@@ -77,7 +76,6 @@ namespace httpget
                 catch { p = null; }
             }
             HandleDisconnectArduino(false);
-            connected = false;
         }
 
         void Exit()
@@ -301,7 +299,6 @@ namespace httpget
             // Create a simple tray menu with only one item.
             trayMenu = new ContextMenu();
             trayMenu.MenuItems.Add("Exit", Exit);
-            trayMenu.MenuItems.Add("Rescan", Rescan);
 
             // Create a tray icon. In this example we use a
             // standard system icon for simplicity, but you
@@ -318,11 +315,6 @@ namespace httpget
         private void Exit(object sender, EventArgs e)
         {
             Exit();
-        }
-        private void Rescan(object sender, EventArgs e)
-        {
-            if (!connected)
-                Scan();
         }
     }
 }
