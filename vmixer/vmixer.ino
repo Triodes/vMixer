@@ -126,7 +126,7 @@ void Poll() //Handle incoming messages
       int randomVal = Serial.read();
       Serial.write(randomVal);
       int i = 0;
-      while (Serial.available() <= 0 || i < 50)
+      while (Serial.available() <= 0 && i < 50)
       {
         delay(10);
         i++;
@@ -152,7 +152,7 @@ void Poll() //Handle incoming messages
 void Liveness(int elapsed)
 {
   isAlive += elapsed;
-  if (isAlive > 3500)
+  if (isAlive > 1500)
   {
     Connected = false;
     isAlive = 0;
