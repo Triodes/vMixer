@@ -13,7 +13,7 @@ namespace httpget
 {
     class Program : ApplicationContext
     {
-        #region Scanning and startup test
+        #region Scanning and startup
 
         SerialPort p;
         WebClient c = new WebClient();
