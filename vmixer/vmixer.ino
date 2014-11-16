@@ -152,7 +152,7 @@ void Poll() //Handle incoming messages
 void Liveness(int elapsed)
 {
   isAlive += elapsed;
-  if (isAlive > 3000)
+  if (isAlive > 3500)
   {
     Connected = false;
     isAlive = 0;

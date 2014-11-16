@@ -93,14 +93,14 @@ namespace httpget
             int type;
             lock (p)
             {
-                type = p.ReadByte();
+                type = ReadByte();
             }
             if (type == 0)
             {
                 int fadeLevel;
                 lock (p)
                 {
-                    fadeLevel = p.ReadByte();
+                    fadeLevel = ReadByte();
                 }
                 Stream st = Query("?Function=SetFader&Value=" + (flip ? 255 - fadeLevel : fadeLevel));
                 st.Close();
@@ -115,7 +115,7 @@ namespace httpget
                 int buttonNr;
                 lock (p)
                 {
-                    buttonNr = p.ReadByte();
+                    buttonNr = ReadByte();
                 }
                 if (buttonNr < 5)
                 {
@@ -128,6 +128,22 @@ namespace httpget
                     st.Close();
                 }
             }
+        }
+
+        int ReadByte()
+        {
+            lock (p)
+            {
+                try
+                {
+                    return p.ReadByte();
+                }
+                catch 
+                {
+                    HandleDisconnectArduino();
+                }
+            }
+            return -1;
         }
 
 
@@ -177,7 +193,14 @@ namespace httpget
                         {
                             lock (p)
                             {
-                                p.Write(new byte[2] {1, Convert.ToByte(ftb)} , 0, 2);
+                                try
+                                {
+                                    p.Write(new byte[2] { 1, Convert.ToByte(ftb) }, 0, 2);
+                                }
+                                catch 
+                                {
+                                    HandleDisconnectArduino();
+                                }
                             }
                         }
                     }
@@ -191,7 +214,14 @@ namespace httpget
         {
             lock (p)
             {
-                p.Write(new byte[2] { 0, (byte)(previewLeds | activeLeds) }, 0, 2);
+                try
+                {
+                    p.Write(new byte[2] { 0, (byte)(previewLeds | activeLeds) }, 0, 2);
+                }
+                catch
+                {
+                    HandleDisconnectArduino();
+                }
             }
         }
 
@@ -205,7 +235,7 @@ namespace httpget
                 }
                 catch
                 {
-                    Exit();
+                    HandleDisconnectArduino();
                 }
             }
         }
@@ -230,7 +260,22 @@ namespace httpget
 
         #endregion
 
+        #region Connection error handling
 
+        void HandleDisconnectArduino()
+        {
+            timer.Stop();
+            keepAlive.Stop();
+            p.DataReceived -= p_DataReceived;
+            Scan();
+        }
+
+        void HandleDisconnectVmix()
+        {
+
+        }
+
+        #endregion
 
         private NotifyIcon trayIcon;
         private ContextMenu trayMenu;
