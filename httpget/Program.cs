@@ -37,6 +37,7 @@ namespace httpget
             trayIcon.Icon = new Icon("succes.ico");
 
             p.DataReceived += p_DataReceived;
+            p.ReceivedBytesThreshold = 2;
 
             timer = new System.Timers.Timer();
             timer.Interval = 20;
@@ -61,6 +62,7 @@ namespace httpget
                     p = new SerialPort(ports[i], 9600);
                     p.ReadTimeout = 1000;
                     byte t = (byte)r.Next(255);
+                    p.Close();
                     p.Open();
                     p.Write(new byte[2] { 255, t }, 0, 2);
                     int temp = p.ReadByte();
@@ -74,7 +76,7 @@ namespace httpget
                 }
                 catch { p = null; }
             }
-            trayIcon.ShowBalloonTip(2000, "Kan niet verbinden!", "Er kan geen verbinding worden gemaakt met de mixer! Check de kabels en klik op rescan.", ToolTipIcon.Error);
+            trayIcon.ShowBalloonTip(3000, "Kan niet verbinden!", "Er kan geen verbinding worden gemaakt met de mixer! Check de kabels en klik op 'rescan'. Als het probleem blijft bestaan: Stop het programma, maak de USB-kabel los en weer vast, start het programma opnieuw.", ToolTipIcon.Error);
             trayIcon.Icon = new Icon("error.ico");
             connected = false;
         }
@@ -274,7 +276,8 @@ namespace httpget
                     timer.Stop();
                     keepAlive.Stop();
                     p.DataReceived -= p_DataReceived;
-                    trayIcon.ShowBalloonTip(2000, "Kan niet verbinden!", "Er kan geen verbinding worden gemaakt met de mixer! Check de kabels en klik op 'rescan'.", ToolTipIcon.Error);
+                    p = null;
+                    trayIcon.ShowBalloonTip(3000, "Kan niet verbinden!", "Er kan geen verbinding worden gemaakt met de mixer! Check de kabels en klik op 'rescan'. Als het probleem blijft bestaan: Stop het programma, maak de USB-kabel los en weer vast, start het programma opnieuw.", ToolTipIcon.Error);
                     trayIcon.Icon = new Icon("error.ico");
                 }
             }
