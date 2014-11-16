@@ -269,17 +269,14 @@ namespace httpget
         void HandleDisconnectArduino()
         {
             lock (locker)
-            {
-                if (connected)
-                {
-                    connected = false;
+            {                
                     timer.Stop();
                     keepAlive.Stop();
                     p.DataReceived -= p_DataReceived;
                     p = null;
-                    trayIcon.ShowBalloonTip(3000, "Kan niet verbinden!", "Er kan geen verbinding worden gemaakt met de mixer! Check de kabels en klik op 'rescan'. Als het probleem blijft bestaan: Stop het programma, maak de USB-kabel los en weer vast, start het programma opnieuw.", ToolTipIcon.Error);
+                    trayIcon.ShowBalloonTip(3000, "Verbinding verbroken!", "De verbinding met de mixer is verbroken. Het programma sluit nu af. Controleer de kabels en herstart het programma.", ToolTipIcon.Error);
                     trayIcon.Icon = new Icon("error.ico");
-                }
+                    Exit();                
             }
         }
 
