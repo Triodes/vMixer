@@ -45,7 +45,7 @@ namespace httpget
             timer.Start();
 
             keepAlive = new System.Timers.Timer();
-            keepAlive.Interval = 1000;
+            keepAlive.Interval = 250;
             keepAlive.Elapsed += new ElapsedEventHandler(KeepAlive);
             keepAlive.Start();
         }
@@ -105,7 +105,7 @@ namespace httpget
                 if (fadeLevel != -1)
                 {
                     Stream st = Query("?Function=SetFader&Value=" + (flip ? 255 - fadeLevel : fadeLevel));
-                    st.Close();
+                    if (st != null) st.Close();
                     if (fadeLevel == 255)
                         flip = true;
                     else if (fadeLevel == 0)
