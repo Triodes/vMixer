@@ -8,6 +8,8 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace httpget
 {
@@ -17,8 +19,11 @@ namespace httpget
 
         SerialPort p;
         WebClient c = new WebClient();
-        private System.Timers.Timer timer, keepAlive;
+        private System.Timers.Timer timer;
+        Stopwatch stopwatch = new Stopwatch();
         bool vmixOn = true;
+        List<Trigger> triggers = new List<Trigger>();
+        
         
         static void Main(string[] args)
         {
@@ -28,54 +33,56 @@ namespace httpget
 
         public Program()
         {
+            stopwatch.Start();
             AddTray();
             Scan();
-        }
-
-        void Start()
-        {
-            trayIcon.Icon = new Icon("succes.ico");
-
-            p.ReceivedBytesThreshold = 2;
-            p.DataReceived += p_DataReceived;
-
-            timer = new System.Timers.Timer();
-            timer.Interval = 20;
-            timer.Elapsed += new ElapsedEventHandler(getInfo);
-            timer.Start();
-
-            keepAlive = new System.Timers.Timer();
-            keepAlive.Interval = 250;
-            keepAlive.Elapsed += new ElapsedEventHandler(KeepAlive);
-            keepAlive.Start();
         }
 
         void Scan()
         {
             Random r = new Random();
             string[] ports = SerialPort.GetPortNames();
+            bool succes;
             for (int i = 0; i < ports.Length; i++)
             {
+                succes = false;
                 try
                 {
                     p = new SerialPort(ports[i], 9600);
                     p.ReadTimeout = 1000;
                     byte t = (byte)r.Next(255);
-                    p.Close();
                     p.Open();
                     p.Write(new byte[2] { 255, t }, 0, 2);
                     int temp = p.ReadByte();
                     if (temp == t)
                     {
-                        p.Write(new byte[1] { 1 }, 0, 1);
-                        //Thread.Sleep(1500);
-                        Start();
-                        return;
+                        succes = true;
                     }
                 }
                 catch { p = null; }
+
+                if (succes)
+                {
+                    p.Write(new byte[1] { 1 }, 0, 1);
+                    //Thread.Sleep(1500);
+                    Start();
+                    return;
+                }
             }
             HandleDisconnectArduino(false);
+        }
+
+        void Start()
+        {
+            trayIcon.Icon = new Icon("succes.ico");
+
+            triggers.Add(new Trigger(20, GetInfo));
+            triggers.Add(new Trigger(250, KeepAlive));
+
+            timer = new System.Timers.Timer();
+            timer.Interval = 1;
+            timer.Elapsed += new ElapsedEventHandler(Loop);
+            timer.Start();
         }
 
         void Exit()
@@ -85,23 +92,34 @@ namespace httpget
 
         #endregion
 
+        long previous, current;
+        int elapsed;
+        void Loop(object sender, EventArgs e)
+        {
+            previous = current;
+            current = stopwatch.ElapsedMilliseconds;
+            elapsed = (int)(current - previous);
+            Tick(elapsed);
+
+            if (p.BytesToRead > 2)
+                DataReceived();
+        }
+
+        void Tick(int elapsed)
+        {
+            foreach (Trigger e in triggers)
+                e.tick(elapsed);
+        }
+
         #region data handling
 
         bool flip = false;
-        void p_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        void DataReceived()
         {
-            int type;
-            lock (p)
-            {
-                type = ReadByte();
-            }
+            int type = ReadByte();
             if (type == 0)
             {
-                int fadeLevel;
-                lock (p)
-                {
-                    fadeLevel = ReadByte();
-                }
+                int fadeLevel = ReadByte();                
                 if (fadeLevel != -1)
                 {
                     Stream st = Query("?Function=SetFader&Value=" + (flip ? 255 - fadeLevel : fadeLevel));
@@ -114,11 +132,7 @@ namespace httpget
             }
             else if (type == 1)
             {
-                int buttonNr;
-                lock (p)
-                {
-                    buttonNr = ReadByte();
-                }
+                int buttonNr = ReadByte();                
                 if (buttonNr < 5)
                 {
                     Stream st = Query("?Function=PreviewInput&Input=" + buttonNr);
@@ -134,16 +148,13 @@ namespace httpget
 
         int ReadByte()
         {
-            lock (p)
+            try
             {
-                try
-                {
-                    return p.ReadByte();
-                }
-                catch 
-                {
-                    HandleDisconnectArduino();
-                }
+                return p.ReadByte();
+            }
+            catch
+            {
+                HandleDisconnectArduino();
             }
             return -1;
         }
@@ -151,7 +162,7 @@ namespace httpget
 
         int preview = 0, oldPreview = 0, active = 0, oldActive = 0;
         bool ftb = false, ftbOld = false;
-        void getInfo(object sender, EventArgs e)
+        void GetInfo()
         {
             Stream response = Query();
             if (response != null)
@@ -187,17 +198,7 @@ namespace httpget
 
                             if (ftb != ftbOld)
                             {
-                                lock (p)
-                                {
-                                    try
-                                    {
-                                        p.Write(new byte[2] { 1, Convert.ToByte(ftb) }, 0, 2);
-                                    }
-                                    catch
-                                    {
-                                        HandleDisconnectArduino();
-                                    }
-                                }
+                                WriteToPort(new byte[2] { 1, Convert.ToByte(ftb) });
                             }
                         }
                     }
@@ -207,50 +208,40 @@ namespace httpget
             }
         }
 
-        void WriteLedState()
+        void WriteToPort(byte[] toSend)
         {
-            lock (p)
+            try
             {
-                try
-                {
-                    p.Write(new byte[2] { 0, (byte)(preview | active) }, 0, 2);
-                }
-                catch
-                {
-                    HandleDisconnectArduino();
-                }
+                p.Write(toSend, 0, toSend.Length);
             }
+            catch
+            {
+                HandleDisconnectArduino(true);
+            }
+                
         }
 
-        void KeepAlive(object sender, EventArgs e)
+        void WriteLedState()
         {
-            lock (p)
-            {
-                try
-                {
-                    p.Write(new byte[1] { 125 }, 0, 1);
-                }
-                catch
-                {
-                    HandleDisconnectArduino();
-                }
-            }
+            WriteToPort(new byte[2] { 0, (byte)(preview | active) });
+        }
+
+        void KeepAlive()
+        {
+            WriteToPort(new byte[1] { 125 });
         }
 
         public Stream Query(string urlEnd = "")
         {
-            string s = "http://127.0.0.1:8088/api/"+urlEnd;
+            string s = "http://127.0.0.1:8088/api/" + urlEnd;
             Stream str = null;
-            lock (c)
+            try
             {
-                try
-                {
-                    str = c.OpenRead(s);
-                }
-                catch
-                {
-                    HandleDisconnectVmix();
-                }
+                str = c.OpenRead(s);
+            }
+            catch
+            {
+                HandleDisconnectVmix();
             }
             if (str != null)
                 vmixOn = true;
@@ -261,23 +252,17 @@ namespace httpget
 
         #region Connection error handling
 
-
-        object locker = new object();
         void HandleDisconnectArduino(bool running = true)
         {
-            lock (locker)
+            if (running)
             {
-                if (running)
-                {
-                    timer.Stop();
-                    keepAlive.Stop();
-                    p.DataReceived -= p_DataReceived;
-                    p = null;
-                }
-                trayIcon.ShowBalloonTip(3000, (running ? "Verbinding verbroken!" : "Kan niet verbinden!"), (running ? "De verbinding met de mixer is verbroken. " : "Kan geen verbinding maken met de mixer. ") + "Het programma sluit nu af. Controleer de kabels en herstart het programma.", ToolTipIcon.Error);
-                trayIcon.Icon = new Icon("error.ico");
-                Exit();
+                timer.Stop();
+                p.Close();
+                p = null;
             }
+            trayIcon.ShowBalloonTip(3000, (running ? "Verbinding verbroken!" : "Kan niet verbinden!"), (running ? "De verbinding met de mixer is verbroken. " : "Kan geen verbinding maken met de mixer. ") + "Het programma sluit nu af. Controleer de kabels en herstart het programma.", ToolTipIcon.Error);
+            trayIcon.Icon = new Icon("error.ico");
+            Exit();
         }
 
         void HandleDisconnectVmix()
