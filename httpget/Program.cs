@@ -18,9 +18,9 @@ namespace httpget
         #region Scanning and startup
 
         SerialPort p;
-        WebClient c = new WebClient();
-        private System.Timers.Timer timer;
+        MyWebClient c = new MyWebClient();
         Stopwatch stopwatch = new Stopwatch();
+        Trigger getvMixInfo;
         bool vmixOn = true;
         List<Trigger> triggers = new List<Trigger>();
         
@@ -64,7 +64,6 @@ namespace httpget
                 if (succes)
                 {
                     p.Write(new byte[1] { 1 }, 0, 1);
-                    //Thread.Sleep(1500);
                     Start();
                     return;
                 }
@@ -75,14 +74,18 @@ namespace httpget
         void Start()
         {
             trayIcon.Icon = new Icon("succes.ico");
-
-            triggers.Add(new Trigger(20, GetInfo));
+            getvMixInfo = new Trigger(500, GetInfo);
+            triggers.Add(getvMixInfo);
             triggers.Add(new Trigger(250, KeepAlive));
 
-            timer = new System.Timers.Timer();
-            timer.Interval = 1;
-            timer.Elapsed += new ElapsedEventHandler(Loop);
-            timer.Start();
+            //timer = new System.Timers.Timer();
+            //timer.Interval = 1;
+            //timer.Elapsed += new ElapsedEventHandler(Loop);
+            //timer.Start();
+            while (true)
+            {
+                Loop();
+            }
         }
 
         void Exit()
@@ -96,12 +99,17 @@ namespace httpget
         int elapsed;
         void Loop(object sender, EventArgs e)
         {
+            Loop();
+        }
+
+        void Loop()
+        {
             previous = current;
             current = stopwatch.ElapsedMilliseconds;
             elapsed = (int)(current - previous);
             Tick(elapsed);
 
-            if (p.BytesToRead > 2)
+            if (p.BytesToRead > 1)
                 DataReceived();
         }
 
@@ -233,6 +241,7 @@ namespace httpget
 
         public Stream Query(string urlEnd = "")
         {
+            
             string s = "http://127.0.0.1:8088/api/" + urlEnd;
             Stream str = null;
             try
@@ -244,7 +253,10 @@ namespace httpget
                 HandleDisconnectVmix();
             }
             if (str != null)
+            {
                 vmixOn = true;
+                getvMixInfo.SetInterval(20);
+            }
             return str;
         }
 
@@ -256,8 +268,7 @@ namespace httpget
         {
             if (running)
             {
-                timer.Stop();
-                p.Close();
+                //timer.Stop();
                 p = null;
             }
             trayIcon.ShowBalloonTip(3000, (running ? "Verbinding verbroken!" : "Kan niet verbinden!"), (running ? "De verbinding met de mixer is verbroken. " : "Kan geen verbinding maken met de mixer. ") + "Het programma sluit nu af. Controleer de kabels en herstart het programma.", ToolTipIcon.Error);
@@ -269,7 +280,10 @@ namespace httpget
         {
             if (vmixOn)
             {
+                getvMixInfo.SetInterval(500);
                 vmixOn = false;
+                preview = active = 0;
+                WriteLedState();
                 trayIcon.ShowBalloonTip(2000, "vMix niet gevonden!", "Het programma kan vMix niet vinden! Controleer of vMix draait.", ToolTipIcon.Error);
             }
         }
