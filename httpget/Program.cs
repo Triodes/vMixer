@@ -28,7 +28,6 @@ namespace httpget
         static void Main(string[] args)
         {
             Program prog = new Program();
-            Application.Run(prog);
         }
 
         public Program()
@@ -78,13 +77,10 @@ namespace httpget
             triggers.Add(getvMixInfo);
             triggers.Add(new Trigger(250, KeepAlive));
 
-            //timer = new System.Timers.Timer();
-            //timer.Interval = 1;
-            //timer.Elapsed += new ElapsedEventHandler(Loop);
-            //timer.Start();
             while (true)
             {
                 Loop();
+                Application.DoEvents();
             }
         }
 
@@ -151,6 +147,10 @@ namespace httpget
                     Stream st = Query("?Function=FadeToBlack");
                     if (st != null) st.Close();
                 }
+            }
+            else if (type == 2)
+            {
+                Exit();
             }
         }
 

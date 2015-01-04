@@ -41,7 +41,7 @@ void loop()
   else
   {
     elapsed2 += (current - previous);
-    if (elapsed2 > 100)
+    if (elapsed2 > 600)
     {
       elapsed2 = 0;
       IndicateScan();
@@ -64,6 +64,11 @@ void processButtons() //read the button values and report changes (if any)
       byte arr[] = {1,i+1};
       Serial.write(arr,2);
     }
+  }
+  if (buttonValues[0] == LOW && buttonValues[4] == LOW)
+  {
+    byte arr[] = {2}; 
+    Serial.write(arr,1);
   }
 }
 
@@ -165,16 +170,9 @@ void Liveness(int elapsed)
   } 
 }
 
-int lp[8] = {2,3,4,5,9,8,7,6};
-int index = 0, index2 = 1;
+boolean on;
 void IndicateScan()
 {
-  digitalWrite(lp[index], LOW);
-  index++;
-  index2++;
-  if (index > 7)
-    index = 0;
-  if (index2 > 7)
-    index2 = 0;
-  digitalWrite(lp[index2], HIGH);
+ digitalWrite(10,!on);
+ on = !on;
 }
