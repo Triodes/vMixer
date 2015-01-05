@@ -139,7 +139,7 @@ namespace httpget
                 }
                 else
                 {
-                    Stream st = Query("?Function=SetZoom&Input=3&Value=0.1");
+                    Stream st = Query("?Function=FadeToBlack");
                     if (st != null) st.Close();
                 }
             }
