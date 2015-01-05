@@ -184,6 +184,9 @@ void Disconnect()
 boolean on;
 void IndicateScan()
 {
- digitalWrite(10,!on);
+ if (on)
+   analogWrite(10,15);
+ else
+   analogWrite(10,0);
  on = !on;
 }

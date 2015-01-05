@@ -98,7 +98,7 @@ namespace httpget
             elapsed = (int)(current - previous);
             Tick(elapsed);
 
-            if (p.BytesToRead > 1)
+            while (p.BytesToRead > 1)
                 DataReceived();
         }
 
