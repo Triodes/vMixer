@@ -139,18 +139,28 @@ void Poll() //Handle incoming messages
       int m = Serial.read();
       if (m == 1)
       {
-        for (int i = 2; i <= 10; i++)
-        {
-          digitalWrite(i, HIGH);
-        }
-        delay(1000);
-        for (int i = 2; i <= 10; i++)
-        {
-          digitalWrite(i, LOW);
-        }
+        int leds[] = {6,7,8,9};
+        Flash(leds, 4, 1000);
         Connected = true;
       }
     }
+  }
+}
+
+void Flash(int leds[], int nLeds, int ms)
+{
+  for (int i = 2; i <= 10; i++)
+  {
+    digitalWrite(i, LOW);
+  }
+  for (int i = 0; i < nLeds; i++)
+  {
+    digitalWrite(leds[i], HIGH);
+  }
+  delay(ms);
+  for (int i = 2; i <= 10; i++)
+  {
+    digitalWrite(i, LOW);
   }
 }
 
@@ -158,16 +168,17 @@ void Liveness(int elapsed)
 {
   isAlive += elapsed;
   if (isAlive > 2500)
-  {
-    Connected = false;
-    isAlive = 0;
-    elapsed1 = 0;
-    elapsed2 = 0;
-    for (int i = 2; i <= 10; i++)
-    {
-      digitalWrite(i, LOW);
-    }
-  } 
+    Disconnect();
+}
+
+void Disconnect()
+{
+  Connected = false;
+  isAlive = 0;
+  elapsed1 = 0;
+  elapsed2 = 0;
+  int leds[] = {2,3,4,5};
+  Flash(leds, 4, 1000);
 }
 
 boolean on;

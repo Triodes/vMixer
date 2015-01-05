@@ -15,7 +15,7 @@ namespace httpget
 {
     class Program : ApplicationContext
     {
-        #region Scanning and startup
+        #region Scanning startup and loop
 
         SerialPort p;
         MyWebClient c = new MyWebClient();
@@ -89,15 +89,8 @@ namespace httpget
             Environment.Exit(0);
         }
 
-        #endregion
-
         long previous, current;
         int elapsed;
-        void Loop(object sender, EventArgs e)
-        {
-            Loop();
-        }
-
         void Loop()
         {
             previous = current;
@@ -114,6 +107,8 @@ namespace httpget
             foreach (Trigger e in triggers)
                 e.tick(elapsed);
         }
+
+        #endregion
 
         #region data handling
 
@@ -144,7 +139,7 @@ namespace httpget
                 }
                 else
                 {
-                    Stream st = Query("?Function=FadeToBlack");
+                    Stream st = Query("?Function=SetZoom&Input=3&Value=0.1");
                     if (st != null) st.Close();
                 }
             }
@@ -165,6 +160,29 @@ namespace httpget
                 HandleDisconnectArduino();
             }
             return -1;
+        }
+
+        void WriteBytes(byte[] toSend)
+        {
+            try
+            {
+                p.Write(toSend, 0, toSend.Length);
+            }
+            catch
+            {
+                HandleDisconnectArduino(true);
+            }
+                
+        }
+
+        void WriteLedState()
+        {
+            WriteBytes(new byte[2] { 0, (byte)(preview | active) });
+        }
+
+        void KeepAlive()
+        {
+            WriteBytes(new byte[1] { 125 });
         }
 
 
@@ -206,42 +224,18 @@ namespace httpget
 
                             if (ftb != ftbOld)
                             {
-                                WriteToPort(new byte[2] { 1, Convert.ToByte(ftb) });
+                                WriteBytes(new byte[2] { 1, Convert.ToByte(ftb) });
                             }
                         }
                     }
                 }
                 r.Close();
-                response.Close(); 
+                response.Close();
             }
-        }
-
-        void WriteToPort(byte[] toSend)
-        {
-            try
-            {
-                p.Write(toSend, 0, toSend.Length);
-            }
-            catch
-            {
-                HandleDisconnectArduino(true);
-            }
-                
-        }
-
-        void WriteLedState()
-        {
-            WriteToPort(new byte[2] { 0, (byte)(preview | active) });
-        }
-
-        void KeepAlive()
-        {
-            WriteToPort(new byte[1] { 125 });
         }
 
         public Stream Query(string urlEnd = "")
         {
-            
             string s = "http://127.0.0.1:8088/api/" + urlEnd;
             Stream str = null;
             try
@@ -266,11 +260,7 @@ namespace httpget
 
         void HandleDisconnectArduino(bool running = true)
         {
-            if (running)
-            {
-                //timer.Stop();
-                p = null;
-            }
+            p = null;
             trayIcon.ShowBalloonTip(3000, (running ? "Verbinding verbroken!" : "Kan niet verbinden!"), (running ? "De verbinding met de mixer is verbroken. " : "Kan geen verbinding maken met de mixer. ") + "Het programma sluit nu af. Controleer de kabels en herstart het programma.", ToolTipIcon.Error);
             trayIcon.Icon = new Icon("error.ico");
             Exit();
