@@ -191,19 +191,13 @@ namespace httpget
         void HandleButtonPress(int button, bool LongPress)
         {
             string end;
-            if (LongPress)
+            string ls = LongPress ? "Long" : "Button";
+            end = Settings.Default[ls + button].ToString();
+            if (end[0] != '?')
             {
-                end = Settings.Default["Long" + button].ToString();
-                if (end[0] != '?')
-                {
-                    string[] s = end.Split(';');
-                    bool b = (bool)GetType().GetProperty(s[0]).GetValue(this);
-                    end = b ? s[1] : s[2];
-                }
-            }
-            else
-            {
-                end = Settings.Default["Button" + button].ToString();
+                string[] s = end.Split(';');
+                bool b = (bool)GetType().GetProperty(s[0]).GetValue(this);
+                end = b ? s[1] : s[2];
             }
             Stream st = Query(end);
             if (st != null) st.Close();
