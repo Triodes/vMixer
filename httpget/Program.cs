@@ -14,16 +14,18 @@ using System.Configuration;
 
 namespace httpget
 {
-    class Program : ApplicationContext
+    class Program
     {
         #region Scanning startup and loop
 
+        const int nButtons = 5;
         SerialPort p;
         MyWebClient c = new MyWebClient();
         Stopwatch stopwatch = new Stopwatch();
         Trigger getvMixInfo;
         bool vmixOn = true;
         List<Trigger> triggers = new List<Trigger>();
+        List<ButtonTrigger> buttonTriggers = new List<ButtonTrigger>();
         Dictionary<string, string> bindings = new Dictionary<string, string>();
         
         
@@ -84,6 +86,13 @@ namespace httpget
                 e.Start();
             }
 
+            for (int i = 1; i <= nButtons; i++)
+            {
+                ButtonTrigger t = new ButtonTrigger(500, HandleButtonPress, i);
+                triggers.Add(t);
+                buttonTriggers.Add(t);
+            }
+
             while (true)
             {
                 Loop();
@@ -139,17 +148,27 @@ namespace httpget
             else if (type == 1) //button was pressed
             {
                 int buttonNr = ReadByte();
-                Stream st = Query(Settings.Default["Button"+buttonNr].ToString());
-                if (st != null) st.Close();
+                buttonTriggers[buttonNr-1].Start();
             }
             else if (type == 2)//button was released
             {
-                ReadByte();
+                int buttonNr = ReadByte();
+                buttonTriggers[buttonNr-1].Reset();
             }
             else if (type == 3)
             {
                 Exit();
             }
+        }
+
+        void HandleButtonPress(int button, bool LongPress)
+        {
+            Stream st;
+            if (LongPress)
+                st = Query(Settings.Default["Long" + button].ToString());
+            else
+                st = Query(Settings.Default["Button" + button].ToString());
+            if (st != null) st.Close();
         }
 
         int ReadByte()

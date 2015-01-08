@@ -40,8 +40,14 @@ namespace httpget
             if (counter >= interval)
             {
                 counter -= interval;
-                triggeredMethod();
+                DoTrigger();
             }
+        }
+
+        protected virtual void DoTrigger()
+        {
+            if (triggeredMethod != null)
+                triggeredMethod();
         }
 
         /// <summary>
@@ -63,7 +69,7 @@ namespace httpget
         /// <summary>
         /// Stops the trigger counter and resets it to zero.
         /// </summary>
-        public void Reset()
+        public virtual void Reset()
         {
             Stop();
             counter = 0;
@@ -81,6 +87,37 @@ namespace httpget
         {
             this.interval = interval;
             counter = 0;
+        }
+    }
+
+    class ButtonTrigger : Trigger
+    {
+        public delegate void OnButtonTrigger(int button, bool longPress);
+
+        OnButtonTrigger triggeredMethod;
+        bool isTriggered = false;
+        int button;
+        public ButtonTrigger(int interval, OnButtonTrigger triggeredMethod, int button) 
+            : base(interval, null)
+        {
+            this.triggeredMethod = triggeredMethod;
+            this.button = button;
+        }
+
+        protected override void DoTrigger()
+        {
+            isTriggered = true;
+            if (triggeredMethod != null)
+                triggeredMethod(button, true);
+            Stop();
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+            if (triggeredMethod != null && !isTriggered)
+                triggeredMethod(button, false);
+            isTriggered = false;
         }
     }
 }
