@@ -1,0 +1,39 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="httpget" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="Button1" Type="System.String" Scope="User">
+      <Value Profile="(Default)">?Function=PreviewInput&amp;Input=1</Value>
+    </Setting>
+    <Setting Name="Button2" Type="System.String" Scope="User">
+      <Value Profile="(Default)">?Function=PreviewInput&amp;Input=2</Value>
+    </Setting>
+    <Setting Name="Button3" Type="System.String" Scope="User">
+      <Value Profile="(Default)">?Function=PreviewInput&amp;Input=3</Value>
+    </Setting>
+    <Setting Name="Button4" Type="System.String" Scope="User">
+      <Value Profile="(Default)">?Function=PreviewInput&amp;Input=4</Value>
+    </Setting>
+    <Setting Name="Button5" Type="System.String" Scope="User">
+      <Value Profile="(Default)">?Function=FadeToBlack</Value>
+    </Setting>
+    <Setting Name="Long1" Type="System.String" Scope="User">
+      <Value Profile="(Default)">?Function=QuickPlay&amp;Input=1</Value>
+    </Setting>
+    <Setting Name="Long2" Type="System.String" Scope="User">
+      <Value Profile="(Default)">?Function=QuickPlay&amp;Input=2</Value>
+    </Setting>
+    <Setting Name="Long3" Type="System.String" Scope="User">
+      <Value Profile="(Default)">?Function=QuickPlay&amp;Input=3</Value>
+    </Setting>
+    <Setting Name="Long4" Type="System.String" Scope="User">
+      <Value Profile="(Default)">?Function=QuickPlay&amp;Input=4</Value>
+    </Setting>
+    <Setting Name="Long5" Type="System.String" Scope="User">
+      <Value Profile="(Default)">muted;?Function=MasterAudioOn;?Function=MasterAudioOff</Value>
+    </Setting>
+    <Setting Name="LongPressInterval" Type="System.String" Scope="User">
+      <Value Profile="(Default)">300</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
