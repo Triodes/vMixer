@@ -51,7 +51,7 @@ void loop()
 }
 
 
-int buttonValues[5];
+int buttonValues[5] = {1,1,1,1,1};
 int oldButtonValues[5];
 void processButtons() //read the button values and report changes (if any)
 {
@@ -64,10 +64,15 @@ void processButtons() //read the button values and report changes (if any)
       byte arr[] = {1,i+1};
       Serial.write(arr,2);
     }
+    else if (buttonValues[i] == HIGH && buttonValues[i] != oldButtonValues[i])
+    {
+      byte arr[] = {2,i+1};
+      Serial.write(arr,2);
+    }
   }
   if (buttonValues[0] == LOW && buttonValues[4] == LOW)
   {
-    byte arr[] = {2}; 
+    byte arr[] = {3}; 
     Serial.write(arr,1);
   }
 }

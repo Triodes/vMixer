@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Configuration;
 
 namespace httpget
 {
@@ -23,6 +24,7 @@ namespace httpget
         Trigger getvMixInfo;
         bool vmixOn = true;
         List<Trigger> triggers = new List<Trigger>();
+        Dictionary<string, string> bindings = new Dictionary<string, string>();
         
         
         static void Main(string[] args)
@@ -77,6 +79,11 @@ namespace httpget
             triggers.Add(getvMixInfo);
             triggers.Add(new Trigger(250, KeepAlive));
 
+            foreach (Trigger e in triggers)
+            {
+                e.Start();
+            }
+
             while (true)
             {
                 Loop();
@@ -116,7 +123,7 @@ namespace httpget
         void DataReceived()
         {
             int type = ReadByte();
-            if (type == 0)
+            if (type == 0) //fader value changed
             {
                 int fadeLevel = ReadByte();                
                 if (fadeLevel != -1)
@@ -129,21 +136,17 @@ namespace httpget
                         flip = false;
                 }
             }
-            else if (type == 1)
+            else if (type == 1) //button was pressed
             {
-                int buttonNr = ReadByte();                
-                if (buttonNr < 5)
-                {
-                    Stream st = Query("?Function=PreviewInput&Input=" + buttonNr);
-                    if (st != null) st.Close();
-                }
-                else
-                {
-                    Stream st = Query("?Function=FadeToBlack");
-                    if (st != null) st.Close();
-                }
+                int buttonNr = ReadByte();
+                Stream st = Query(Settings.Default["Button"+buttonNr].ToString());
+                if (st != null) st.Close();
             }
-            else if (type == 2)
+            else if (type == 2)//button was released
+            {
+                ReadByte();
+            }
+            else if (type == 3)
             {
                 Exit();
             }
@@ -288,6 +291,7 @@ namespace httpget
             // Create a simple tray menu with only one item.
             trayMenu = new ContextMenu();
             trayMenu.MenuItems.Add("Exit", Exit);
+            trayMenu.MenuItems.Add("Configure", OpenConfig);
 
             // Create a tray icon. In this example we use a
             // standard system icon for simplicity, but you
@@ -299,6 +303,12 @@ namespace httpget
             // Add menu to tray icon and show it.
             trayIcon.ContextMenu = trayMenu;
             trayIcon.Visible = true;
+        }
+
+        private void OpenConfig(object sender, EventArgs e)
+        {
+            Configuration confWin = new Configuration();
+            confWin.Show();
         }
 
         private void Exit(object sender, EventArgs e)

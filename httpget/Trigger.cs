@@ -18,8 +18,8 @@ namespace httpget
         //counter denoting time since last trigger
         int counter = 0;
 
-        //flag if tyhe counter is running
-        bool running;
+        //flag if the counter is running
+        bool running = false;
 
         /// <param name="interval">Time between triggers in ms.</param>
         /// <param name="triggeredMethod">The method to ber triggered.</param>
@@ -35,7 +35,8 @@ namespace httpget
         /// <param name="elapsedMilliseconds">Elapsed time since the last tick.</param>
         public void tick(int elapsedMilliseconds)
         {
-            counter += elapsedMilliseconds;
+            if (running)
+                counter += elapsedMilliseconds;
             if (counter >= interval)
             {
                 counter -= interval;
