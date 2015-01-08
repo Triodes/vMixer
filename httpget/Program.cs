@@ -149,12 +149,12 @@ namespace httpget
             else if (type == 1) //button was pressed
             {
                 int buttonNr = ReadByte();
-                buttonTriggers[buttonNr-1].Start();
+                buttonTriggers[buttonNr].Start();
             }
             else if (type == 2)//button was released
             {
                 int buttonNr = ReadByte();
-                buttonTriggers[buttonNr-1].Reset();
+                buttonTriggers[buttonNr].Reset();
             }
             else if (type == 3)
             {
