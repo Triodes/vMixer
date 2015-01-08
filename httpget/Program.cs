@@ -11,6 +11,7 @@ using System.Timers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Configuration;
+using System.Reflection;
 
 namespace httpget
 {
@@ -86,10 +87,11 @@ namespace httpget
                 e.Start();
             }
 
+            Settings.Default.PropertyChanged += ReloadConfig;
             buttonTriggers.Add(null);
             for (int i = 1; i <= nButtons; i++)
             {
-                ButtonTrigger t = new ButtonTrigger(500, HandleButtonPress, i);
+                ButtonTrigger t = new ButtonTrigger(int.Parse(Settings.Default.LongPressInterval), HandleButtonPress, i);
                 triggers.Insert(i,t);
                 buttonTriggers.Add(t);
             }
@@ -98,6 +100,14 @@ namespace httpget
             {
                 Loop();
                 Application.DoEvents();
+            }
+        }
+
+        void ReloadConfig(object sender, EventArgs e)
+        {
+            for (int i = 1; i <= nButtons; i++)
+            {
+                buttonTriggers[i].SetInterval(int.Parse(Settings.Default.LongPressInterval));
             }
         }
 
@@ -115,8 +125,24 @@ namespace httpget
             elapsed = (int)(current - previous);
             Tick(elapsed);
 
-            while (p.BytesToRead > 1)
+            while (BytesToRead > 1)
                 DataReceived();
+        }
+
+        int BytesToRead
+        {
+            get
+            {
+                try
+                {
+                    return p.BytesToRead;
+                }
+                catch
+                {
+                    HandleDisconnectArduino();
+                }
+                return 0;
+            }
         }
 
         void Tick(int elapsed)
@@ -164,11 +190,22 @@ namespace httpget
 
         void HandleButtonPress(int button, bool LongPress)
         {
-            Stream st;
+            string end;
             if (LongPress)
-                st = Query(Settings.Default["Long" + button].ToString());
+            {
+                end = Settings.Default["Long" + button].ToString();
+                if (end[0] != '?')
+                {
+                    string[] s = end.Split(';');
+                    bool b = (bool)GetType().GetProperty(s[0]).GetValue(this);
+                    end = b ? s[1] : s[2];
+                }
+            }
             else
-                st = Query(Settings.Default["Button" + button].ToString());
+            {
+                end = Settings.Default["Button" + button].ToString();
+            }
+            Stream st = Query(end);
             if (st != null) st.Close();
         }
 
@@ -211,6 +248,8 @@ namespace httpget
 
         int preview = 0, oldPreview = 0, active = 0, oldActive = 0;
         bool ftb = false, ftbOld = false;
+
+        public bool muted { get; set; }
         void GetInfo()
         {
             Stream response = Query();
@@ -249,6 +288,12 @@ namespace httpget
                             {
                                 WriteBytes(new byte[2] { 1, Convert.ToByte(ftb) });
                             }
+                        }
+                        else if (r.Name == "master")
+                        {
+                            r.MoveToAttribute(1);
+                            r.ReadAttributeValue();
+                            muted = bool.Parse(r.Value);                           
                         }
                     }
                 }
