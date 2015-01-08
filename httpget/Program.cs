@@ -86,10 +86,11 @@ namespace httpget
                 e.Start();
             }
 
+            buttonTriggers.Add(null);
             for (int i = 1; i <= nButtons; i++)
             {
                 ButtonTrigger t = new ButtonTrigger(500, HandleButtonPress, i);
-                triggers.Add(t);
+                triggers.Insert(i,t);
                 buttonTriggers.Add(t);
             }
 
